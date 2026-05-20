@@ -4,16 +4,468 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AI Adventure Academy</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Nunito', sans-serif; background: #0f0c29; color: white; }
+    @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+    @keyframes slide-up { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes pop-in { 0%{transform:scale(0.5);opacity:0} 80%{transform:scale(1.1)} 100%{transform:scale(1);opacity:1} }
+    @keyframes xp-fly { 0%{opacity:1;transform:translateY(0) scale(1)} 100%{opacity:0;transform:translateY(-80px) scale(1.4)} }
+    @keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
+    .float { animation: float 3s ease-in-out infinite; }
+    .slide-up { animation: slide-up 0.5s ease forwards; }
+    .pop-in { animation: pop-in 0.4s ease forwards; }
+    .xp-fly { animation: xp-fly 1s ease forwards; }
+    .shimmer-btn {
+      background: linear-gradient(90deg,#a78bfa,#ec4899,#f59e0b,#a78bfa);
+      background-size: 200% 100%;
+      animation: shimmer 2s linear infinite;
+    }
+    .display-font { font-family: 'Fredoka One', cursive; }
+    textarea:focus, input:focus { outline: none; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb { background: rgba(168,139,250,0.4); border-radius: 3px; }
+  </style>
 </head>
 <body>
-  <div id="root"></div>
-  <script type="text/babel" src="./src/App.jsx"></script>
-  <script type="text/babel">
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(React.createElement(App));
-  </script>
+<div id="root"></div>
+<script type="text/babel">
+
+const { useState, useEffect, useRef } = React;
+
+const WORLDS = [
+  {
+    id:1, emoji:"🌌", name:"What IS AI?", subtitle:"Start your journey",
+    g1:"#FF6B6B", g2:"#FF8E53",
+    lessons:[
+      { id:"1-1", icon:"🧠", title:"AI is a Super-Brain Computer", xp:50, type:"learn",
+        content:`Imagine a friend who has READ every book, website, and article ever written — billions of pages! They can answer almost any question you throw at them. That friend is basically what AI is.\n\nAI like Claude learned from BILLIONS of sentences written by humans. Now it can:\n✨ Answer your questions instantly\n✨ Write stories, poems, and jokes\n✨ Help you design and code apps\n✨ Solve tricky problems step by step\n\nBut here's the wild part — AI doesn't think the way YOU do. It's an unbelievably good pattern-matcher.\n\nYou + AI = Unstoppable team! 🚀`,
+        quiz:{q:"What did AI like Claude mainly learn from?",opts:["Playing video games","Billions of sentences written by people","Watching movies","Talking to robots"],a:1}},
+      { id:"1-2", icon:"🚫", title:"AI's Superpowers & Kryptonite", xp:50, type:"learn",
+        content:`Every superhero has a weakness, and AI is no different!\n\n🟢 AI is AMAZING at:\n• Explaining anything in simple words\n• Writing, editing, and brainstorming\n• Writing code for apps and games\n• Translating languages instantly\n\n🔴 AI struggles with:\n• Knowing what happened YESTERDAY\n• Doing things in the physical world\n• Being 100% right every time\n• True creativity without your guidance\n\nThe best AI users know when to trust AI and when to double-check. That's called being AI-literate! 🎓`,
+        quiz:{q:"Which is something AI is NOT great at?",opts:["Writing stories","Translating languages","Knowing what happened yesterday","Explaining things"],a:2}},
+      { id:"1-3", icon:"📱", title:"AI Apps You Already Use", xp:75, type:"learn",
+        content:`AI is already woven into your daily life!\n\n🎵 Spotify — AI studies your listening and recommends songs you'll love.\n🎮 Video Games — Enemy characters use AI to chase you!\n📸 Phone Camera — Face recognition and portrait mode? All AI!\n🔍 Google Search — AI figures out what you ACTUALLY meant.\n🎬 Netflix & YouTube — AI picks what to show you next.\n\nAnd now you're learning to use Claude — one of the most advanced AI assistants ever built. You're not just a user anymore. You're becoming a CREATOR! 🧙‍♂️`,
+        quiz:{q:"When Netflix picks a show you might like, what is it using?",opts:["Magic","Pure random chance","AI that studies your habits","Your friends' accounts"],a:2}},
+    ]
+  },
+  {
+    id:2, emoji:"🔮", name:"Mastering Prompts", subtitle:"Talk to AI like a pro",
+    g1:"#4ECDC4", g2:"#44A08D",
+    lessons:[
+      { id:"2-1", icon:"✨", title:"The Secret Language of AI", xp:75, type:"learn",
+        content:`A "prompt" is the message you type to an AI. The QUALITY of what you type determines the QUALITY of what you get back.\n\nCompare these:\n\n😴 WEAK: "Write me a story"\n\n🚀 POWER: "Write a 3-paragraph adventure story for a 10-year-old about a girl named Zara who discovers her pet hamster can talk. Make it funny and end with a plot twist."\n\nThe Power Prompt is specific about:\n✅ Length (3 paragraphs)\n✅ Audience (10-year-old)\n✅ Character (Zara + hamster)\n✅ Tone (funny)\n✅ Ending (plot twist)\n\nMore details = better results. Every time.`,
+        quiz:{q:"What makes a prompt more powerful?",opts:["Making it shorter","Using fancy words","Adding specific details and context","Typing in ALL CAPS"],a:2}},
+      { id:"2-2", icon:"🎭", title:"Give AI a Role to Play", xp:100, type:"practice",
+        content:`One of the most powerful prompting tricks is telling AI WHO to be!\n\nCompare:\n😴 "Explain gravity"\n🚀 "You are an enthusiastic science teacher who loves making things fun for 10-year-olds. Explain gravity using a basketball example."\n\nSome great roles:\n🎓 "You are a patient tutor who explains things step by step"\n🎮 "You are a game designer who loves making things fun"\n📖 "You are a storyteller who makes everything dramatic"\n💼 "You are a business coach helping a young entrepreneur"\n\nTry it in the practice box! Give Claude a role, then ask your question.`,
+        challenge:{weak:"Explain how apps make money",hint:"Give Claude a role first! Try: 'You are a friendly business teacher for kids. Explain...' then ask your question with details."}},
+      { id:"2-3", icon:"🔄", title:"The Art of the Follow-Up", xp:75, type:"learn",
+        content:`You don't have to get it perfect in ONE message! AI conversations are like playing catch.\n\nPowerful follow-up phrases:\n\n🔧 "That's good! Now make it funnier and add a plot twist."\n📝 "Can you explain that again but simpler? I'm 10 years old."\n🎯 "Change the main character to a girl and set it in space."\n⬆️ "Add a second paragraph about what happens next."\n🔍 "Wait, is that actually true? Can you double-check?"\n✂️ "That's too long. Give me just the 3 most important points."\n\nPro move: Ask Claude at the end: "What questions could I have asked to get an even better answer?" 🎓`,
+        quiz:{q:"What's the best thing to do if Claude's first answer isn't quite right?",opts:["Delete everything","Give up","Follow up and tell it what to change","Copy it anyway"],a:2}},
+    ]
+  },
+  {
+    id:3, emoji:"🚀", name:"Build Your First App", subtitle:"Ideas become reality",
+    g1:"#A78BFA", g2:"#7C3AED",
+    lessons:[
+      { id:"3-1", icon:"💡", title:"Every App Starts With a Problem", xp:100, type:"learn",
+        content:`EVERY billion-dollar app started with someone being annoyed about something.\n\n🏠 Airbnb ($75B) — Founders rented air mattresses in their apartment\n🚗 Uber ($72B) — Guy couldn't get a taxi on a rainy night\n📸 Instagram ($1B) — People wanted to share photos but they looked bad\n🎵 Spotify ($24B) — Someone wanted legal, easy music\n\nThe formula: PROBLEM → IDEA → APP\n\nTo find YOUR app idea:\n🤔 "What wastes my time?"\n🤔 "What do I wish existed?"\n🤔 "What do my friends always complain about?"\n\nSimple apps that solve one problem well can make real money! 💎`,
+        quiz:{q:"What did Airbnb's founders do that inspired their company?",opts:["Invented flying cars","Rented air mattresses in their apartment","Built a hotel","Created a travel website"],a:1}},
+      { id:"3-2", icon:"📋", title:"The App Blueprint", xp:150, type:"practice",
+        content:`Before you build anything, you need a BLUEPRINT!\n\n📋 THE APP BLUEPRINT:\n1️⃣ THE PROBLEM: What does this solve?\n2️⃣ TARGET USER: Who will use it?\n3️⃣ THE SOLUTION: What does your app DO?\n4️⃣ CORE FEATURES: The 3 most important things\n5️⃣ APP NAME: Something catchy!\n6️⃣ HOW IT MAKES MONEY\n\nEXAMPLE — Homework Hero:\n• Problem: I forget what homework I have\n• User: Students age 8-14\n• Solution: Track homework with smart reminders\n• Features: Add tasks, set deadlines, streak counter\n• Name: Homework Hero ⚡\n• Money: Free app, $1.99/month for reminders\n\nUse the practice box to describe YOUR app idea to Claude!`,
+        challenge:{weak:"I want to make an app",hint:"Describe your specific idea! Ask Claude: 'Help me fill in an App Blueprint for my idea: [your idea here]'"}},
+      { id:"3-3", icon:"🏗️", title:"Tell Claude to Build It!", xp:200, type:"practice",
+        content:`You can tell Claude to write actual working code for your app!\n\n🔨 THE APP BUILDER PROMPT:\n"Build me a [App Name] app using React. Make it colorful and fun for kids.\n\nFeatures:\n- [Feature 1]\n- [Feature 2]\n- [Feature 3]\n\nDesign: Make it look like [describe the vibe]\nUser: This app is for [who?]\nKeep the code clean and fully working."\n\nREAL EXAMPLE:\n"Build me a Homework Hero app in React. Features: add homework with subject and due date, color-coded list (red=due tomorrow, green=not urgent), tap to mark complete with confetti, streak counter. Space-themed design. For students age 8-14."\n\nPaste Claude's response into Claude.ai as an Artifact! 🎉`,
+        challenge:{weak:"Build me an app",hint:"Use the full App Builder Prompt! Include the app name, 3+ specific features, a design vibe, and who it's for."}},
+    ]
+  },
+  {
+    id:4, emoji:"🎮", name:"Build Games for Money", subtitle:"Turn fun into income",
+    g1:"#F59E0B", g2:"#EF4444",
+    lessons:[
+      { id:"4-1", icon:"💰", title:"How Games Actually Make Money", xp:150, type:"learn",
+        content:`Kids younger than YOU have made MILLIONS making games! Here's the business side:\n\n💎 THE 6 WAYS GAMES MAKE MONEY:\n\n1️⃣ PAID DOWNLOAD — Players pay once ($0.99–$9.99)\nMinecraft launched at $6.99!\n\n2️⃣ FREE + ADS — Free to play, shows ads between levels\n\n3️⃣ IN-APP PURCHASES — Free game, buy special items inside\nFortnite skins ($8–$20 each!) earns $1 BILLION+ per year!\n\n4️⃣ SUBSCRIPTIONS — Pay monthly for extra content\n\n5️⃣ BATTLE PASSES — Pay for a season of special rewards\n\n6️⃣ SELL ON PLATFORMS — Steam, App Store, Google Play\n\nBest strategy for young developers: Start FREE with ads, add one cheap in-app purchase, grow your players! 🎯`,
+        quiz:{q:"How does Fortnite make most of its $1 billion+ per year?",opts:["Charging to download","Selling merchandise","In-app purchases like skins","Monthly subscriptions"],a:2}},
+      { id:"4-2", icon:"🎲", title:"Design a Game That's Hard to Stop", xp:150, type:"learn",
+        content:`The most profitable games share a secret formula called the "engagement loop":\n\n🔄 CHALLENGE → ACTION → REWARD → BIGGER CHALLENGE → repeat!\n\nThis is why you can't put down Candy Crush or Minecraft!\n\n🧲 HOOKS THAT KEEP PLAYERS COMING BACK:\n⭐ Daily Login Bonus — "Come back tomorrow for a free reward!"\n🏆 Achievement System — "Collect all 50 badges!"\n👥 Leaderboards — "Beat your friend's high score!"\n📈 Progression — Level up, unlock new characters\n🎰 Surprise Rewards — Random drops keep it exciting\n⏰ Limited Time Events — "Only 3 days to get this item!"\n\n💡 GAME IDEAS AI CAN BUILD:\n• Quiz trivia games\n• Endless runner games\n• Card battle games\n• Word games with power-ups\n• Pet simulation games`,
+        quiz:{q:"What is the 'engagement loop' in games?",opts:["Buy premium, get rewards","Challenge → Action → Reward → Bigger Challenge","Log in daily and collect coins","Watch ads to earn currency"],a:1}},
+      { id:"4-3", icon:"🕹️", title:"Ask Claude to Build Your Game", xp:250, type:"practice",
+        content:`Let's build a REAL game! Here's the ultimate template:\n\n🎮 THE GAME BUILDER PROMPT:\n"Build me a complete [game type] game in React.\n\nGAME CONCEPT: [2 sentences]\nPLAYER GOAL: [What does the player try to do?]\nCORE MECHANIC: [click, type, match, dodge]\n\nFEATURES:\n- Score counter\n- Lives or health system\n- Increasing difficulty\n- Game over screen with score\n- Start/restart button\n- Celebration animation for big scores\n\nMONETIZATION: Add a banner saying 'Premium removes ads!'\nDESIGN: Make it look like [arcade/cute/sci-fi]\nMake it fully playable and fun!"\n\n🏆 EXAMPLE:\n"Build a Word Blaster game where letters fall from the top and you type words before they hit the bottom. Speed increases every 30 seconds. Neon arcade design. Add confetti when setting a new high score."`,
+        challenge:{weak:"Make me a game",hint:"Use the Game Builder Prompt! Include game type, player goal, core mechanic, 4+ features, and a design style. More specific = better game!"}},
+      { id:"4-4", icon:"📊", title:"Publish & Earn: Your Game Business", xp:200, type:"learn",
+        content:`You've built a game — now let's turn it into a REAL business!\n\n📍 STEP 1: Test With Friends (Week 1–2)\nShare with 10 friends. Watch them play. What confuses them? Fix the big problems.\n\n📍 STEP 2: Polish It (Week 2–4)\nAsk Claude to improve design, fix bugs, add a tutorial.\n\n📍 STEP 3: Choose Your Platform\n🌐 itch.io — Perfect for young developers! Free to list, you keep 90%+ of sales.\n📱 Mobile — $25 one-time for Android, $99/year for iPhone\n🖥️ Desktop — Steam (needs adult account)\n\n📍 STEP 4: Price It Right\nFirst game: FREE with one in-app purchase ($0.99 to unlock all levels)\n\n📍 STEP 5: Get Players\n• Post gameplay on YouTube/TikTok\n• Share in gaming communities\n• Tell your whole school!\n\n💰 Robert Nay made "Bubble Ball" at age 14 — it hit #1 on the App Store! 🌟`,
+        quiz:{q:"What platform is BEST for a young developer's first web game?",opts:["Steam","itch.io (free and easy)","App Store only","You can't publish young"],a:1}},
+    ]
+  },
+  {
+    id:5, emoji:"🤖", name:"AI Tools of the Future", subtitle:"Stay ahead of the curve",
+    g1:"#06B6D4", g2:"#3B82F6",
+    lessons:[
+      { id:"5-1", icon:"🌐", title:"AI Tools Changing Everything NOW", xp:150, type:"live",
+        content:`The AI world moves FAST. New tools launch every week! Here are the major categories:\n\n🎨 IMAGE AI — Tools like Midjourney and DALL-E turn your words into stunning artwork in seconds!\n\n🎵 MUSIC AI — Tools like Suno create full songs from a text description. "Write an upbeat pop song about friendship" → full song in 30 seconds!\n\n🎬 VIDEO AI — Tools like Runway create short videos from text prompts.\n\n💻 CODING AI — GitHub Copilot writes code as you type. Replit lets you build apps with AI help.\n\n🗣️ VOICE AI — ElevenLabs clones voices. AI can read your story in any voice!\n\nAnd NEW tools are launching every single week. Use the practice box to ask Claude about the LATEST tools right now! 🔮`,
+        challenge:{weak:"What AI tools are new?",hint:"Ask: 'You are a tech journalist for kids age 10. List the 5 most exciting new AI tools right now and explain what each does with an example a kid would love.'"}},
+      { id:"5-2", icon:"🧬", title:"AI That Sees, Hears & Understands", xp:150, type:"learn",
+        content:`AI used to only understand text. Now it can see, hear, and understand the world! This is called MULTIMODAL AI.\n\n👁️ VISION AI:\n• Photo of homework → AI solves it\n• Point at a plant → AI identifies the species\n• Show a broken toy → AI tells you how to fix it\n• Upload your drawing → AI turns it professional\n\n👂 HEARING AI:\n• Speak in any language → instant translation\n• Hum a melody → AI turns it into sheet music\n\n🤝 AI IN THE REAL WORLD:\n• Self-driving cars\n• Doctors spotting diseases in X-rays\n• Farmers using AI drones\n\n🔮 COMING SOON:\n• AI robots doing physical tasks\n• AI glasses giving you info about everything you see\n• AI tutors that watch your face to see if you're confused!`,
+        quiz:{q:"What does 'multimodal AI' mean?",opts:["AI that speaks multiple languages","AI that works on multiple devices","AI that understands text, images AND audio","AI with multiple personalities"],a:2}},
+      { id:"5-3", icon:"📡", title:"AI News: What Happened This Week?", xp:100, type:"live",
+        content:`AI moves so fast that by the time you read this, there are NEW breakthroughs nobody had heard of before. That's what makes this the most exciting time in history!\n\nThis is a special LIVE lesson — ask Claude directly about the most recent AI news.\n\n📰 WHAT TO LOOK FOR IN AI NEWS:\n• New AI models being released\n• AI being used in a surprising new way\n• Young people using AI to earn money\n• AI tools that are free for students\n\n🤔 QUESTIONS TO ALWAYS ASK:\n1. Who benefits? Who might be harmed?\n2. Is this real or hype?\n3. How could a kid use this?\n4. What problem does this solve?\n\nUse the practice box to ask Claude about the latest AI news and analyze it like a pro journalist! 🎓`,
+        challenge:{weak:"Tell me AI news",hint:"Ask: 'You are writing an AI news report for curious 10-year-olds. Tell me 3 exciting things happening in AI right now. For each: explain simply, say why it matters, and describe how a kid could use it.'"}},
+    ]
+  },
+  {
+    id:6, emoji:"🌟", name:"AI Ethics & Safety", subtitle:"Use power responsibly",
+    g1:"#10B981", g2:"#84CC16",
+    lessons:[
+      { id:"6-1", icon:"⚖️", title:"With Great AI Comes Great Responsibility", xp:100, type:"learn",
+        content:`You're becoming a powerful AI user. With power comes responsibility!\n\n🚨 THE GOLDEN RULES OF AI USE:\n\n1️⃣ ALWAYS CHECK AI'S FACTS\nAI can be confidently WRONG (called "hallucinating"). Always verify important information!\n\n2️⃣ BE HONEST ABOUT USING AI\nUsing AI to help is fine — but pretending AI did zero work is dishonest.\n\n3️⃣ DON'T USE AI TO HURT PEOPLE\nWhat you create with AI is YOUR responsibility.\n\n4️⃣ PROTECT PRIVATE INFO\nNever put your address, phone number, or passwords into AI.\n\n5️⃣ THINK FOR YOURSELF\nAI is a tool, not your brain. Use AI to make YOUR ideas better!\n\nBeing ethical makes you a better creator AND a better person. 💚`,
+        quiz:{q:"What should you ALWAYS do with important facts AI tells you?",opts:["Trust them completely","Ignore them","Verify from a real source","Copy them immediately"],a:2}},
+      { id:"6-2", icon:"🛡️", title:"Spotting AI Fakes & Misinformation", xp:125, type:"learn",
+        content:`AI can create incredibly realistic fake photos, videos, and text. Learning to spot fakes is one of the most important skills of your generation!\n\n🔍 SPOTTING FAKE AI IMAGES:\n• Hands look weird — too many or strange fingers\n• Backgrounds are blurry or repeating\n• Text in the image looks like gibberish\n• Faces look "too perfect" with glassy eyes\n• Reverse image search it on Google!\n\n🔍 SPOTTING AI TEXT:\n• Sounds very "professional" with no personality\n• Rarely takes a strong opinion\n• Uses phrases like "it's important to note"\n• Details are vague\n\n🔍 SPOTTING DEEPFAKE VIDEOS:\n• Blurring around face edges\n• Lighting doesn't match background\n• Blinking looks unnatural\n\nBest defense? SLOW DOWN before sharing. Ask: "Could this be fake?" 🛑`,
+        quiz:{q:"What's a giveaway that an AI image might be fake?",opts:["It's too colorful","The hands look weird","The background is blurry","It has a watermark"],a:1}},
+      { id:"6-3", icon:"🌍", title:"AI and the Future of Jobs", xp:100, type:"learn",
+        content:`Will AI take everyone's jobs? Let's think about this honestly.\n\n🤔 THE HONEST ANSWER:\nAI WILL change many jobs. But it probably won't make humans useless — it will change WHAT humans do.\n\n📉 AI MIGHT REPLACE PARTS OF:\n• Data entry and filing\n• Basic customer service\n• Simple writing tasks\n• Repetitive manufacturing\n\n📈 JOBS THAT WILL GROW:\n• AI trainers and prompt engineers\n• AI safety researchers\n• Creative directors who guide AI\n• Entrepreneurs who BUILD with AI (that's YOU!)\n• Human-centered services (doctors, teachers, counselors)\n\n💡 BEST CAREER ADVICE FOR YOUR GENERATION:\nDon't compete WITH AI. Learn to work WITH AI.\n\n✅ Know how to direct AI toward great outputs\n✅ Have human creativity and judgment\n✅ Build things WITH AI\n\nYou're learning all of this RIGHT NOW. You're ahead of the curve! 🏆`,
+        quiz:{q:"What's the smartest career approach for the AI generation?",opts:["Avoid learning about AI","Compete against AI","Learn to work WITH AI","Wait to see what happens"],a:2}},
+    ]
+  },
+  {
+    id:7, emoji:"👑", name:"Young AI Entrepreneur", subtitle:"Build your AI business",
+    g1:"#EC4899", g2:"#8B5CF6",
+    lessons:[
+      { id:"7-1", icon:"💼", title:"Kids Who Made Real Money With AI", xp:150, type:"learn",
+        content:`These are REAL stories of young people who turned tech skills into income!\n\n🏆 ROBERT NAY — Age 14\nBuilt "Bubble Ball" during Christmas break. Hit #1 on the App Store beating Angry Birds. Downloaded 2 million times.\n\n🏆 ROBLOX DEVELOPERS — Various ages (some under 16)\nThousands earn real money. Top developers earn $50,000–$1,000,000+ per year using free tools!\n\n🏆 YOUTUBE TUTORIALS — Ages 12+\nTeen YouTubers who explain tech get millions of views. AI helps them write scripts and edit faster.\n\n🏆 AI ART SELLERS\nKids selling AI-generated artwork on Etsy and Redbubble make $200–$500/month.\n\n🏆 PROMPT SELLERS\nSelling "prompt packs" on Gumroad for $5–$15 each.\n\nNOTICE THE PATTERN? They didn't wait until they were adults. They STARTED. What will you start? 🚀`,
+        quiz:{q:"How did 14-year-old Robert Nay make 'Bubble Ball'?",opts:["He had a team of 50 engineers","He built it in 2 weeks during Christmas break","He bought another game","He hired adult programmers"],a:1}},
+      { id:"7-2", icon:"🛒", title:"5 Ways to Earn With AI Right Now", xp:200, type:"learn",
+        content:`You don't have to wait to be an adult. Here are 5 real income ideas:\n\n💰 IDEA 1: AI GAME DEVELOPER\nBuild games with Claude, publish on itch.io (free!). Even 100 players at $0.99 = $99!\n\n💰 IDEA 2: PROMPT PACK CREATOR\nCreate collections of great AI prompts. Sell on Gumroad for $5–$15 each.\n\n💰 IDEA 3: AI ART PRINT STORE\nCreate artwork with free AI tools. Upload to Redbubble — they print on t-shirts and mugs and you earn commission!\n\n💰 IDEA 4: AI TUTOR FOR OTHER KIDS\nCharge $10/hour to teach friends how to use AI. Ask your parents to help set this up.\n\n💰 IDEA 5: YOUTUBE/TIKTOK AI CHANNEL\nFilm yourself using AI. When you get 1,000 YouTube subscribers, you can monetize!\n\n⚠️ IMPORTANT: Kids under 18 need a parent to set up payment accounts. Make it a family project! 🏠`,
+        quiz:{q:"What do you need to receive money if you're under 18?",opts:["Nothing","A parent to set up payment accounts","A lawyer","$1000 to start"],a:1}},
+      { id:"7-3", icon:"🗺️", title:"Your 90-Day AI Creator Roadmap", xp:250, type:"learn",
+        content:`Let's make a REAL plan. Here's your 90-day roadmap:\n\n📅 DAYS 1–30: LEARN & EXPERIMENT\n✅ Finish all 7 worlds in this app\n✅ Build 2–3 small apps or games with Claude\n✅ Try 5 different AI tools\n✅ Start a notebook of your ideas\n✅ Pick ONE project you're excited about\n\n📅 DAYS 31–60: BUILD YOUR THING\n✅ Build your chosen game or app with Claude\n✅ Test it with 10 friends\n✅ Fix the biggest problems\n✅ Add a monetization feature\n✅ Create a logo with AI\n\n📅 DAYS 61–90: LAUNCH & SHARE\n✅ Publish on itch.io or your platform\n✅ Make ONE piece of content about it\n✅ Tell everyone you know\n✅ Keep improving based on feedback\n\n🏆 THE MINDSET:\nDon't wait for perfect. Ship something. Learn. Improve. GO! 🚀`,
+        quiz:{q:"In the 90-day plan, what happens in the FIRST 30 days?",opts:["Launch your product","Learn, experiment, and pick a project","Focus only on money","Build 10 different apps"],a:1}},
+    ]
+  }
+];
+
+const BADGES = [
+  {id:"first",icon:"👟",name:"First Step!",check:p=>p.done.length>=1},
+  {id:"w1",icon:"🌌",name:"AI Explorer",check:p=>["1-1","1-2","1-3"].every(i=>p.done.includes(i))},
+  {id:"w2",icon:"🔮",name:"Prompt Wizard",check:p=>["2-1","2-2","2-3"].every(i=>p.done.includes(i))},
+  {id:"w3",icon:"🚀",name:"App Builder",check:p=>["3-1","3-2","3-3"].every(i=>p.done.includes(i))},
+  {id:"w4",icon:"🎮",name:"Game Dev Jr.",check:p=>["4-1","4-2","4-3","4-4"].every(i=>p.done.includes(i))},
+  {id:"w5",icon:"🤖",name:"Future Spotter",check:p=>["5-1","5-2","5-3"].every(i=>p.done.includes(i))},
+  {id:"w6",icon:"🌍",name:"Ethics Champ",check:p=>["6-1","6-2","6-3"].every(i=>p.done.includes(i))},
+  {id:"w7",icon:"👑",name:"AI Entrepreneur!",check:p=>["7-1","7-2","7-3"].every(i=>p.done.includes(i))},
+  {id:"xp500",icon:"⚡",name:"XP Hunter",check:p=>p.xp>=500},
+  {id:"xp1000",icon:"💎",name:"XP Master",check:p=>p.xp>=1000},
+];
+
+function Stars() {
+  const stars = Array.from({length:30},(_,i)=>i);
+  return React.createElement('div',{style:{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,overflow:"hidden"}},
+    stars.map(i=>React.createElement('div',{key:i,style:{
+      position:"absolute",width:Math.random()*3+1+"px",height:Math.random()*3+1+"px",
+      borderRadius:"50%",background:"white",left:Math.random()*100+"%",top:Math.random()*100+"%",
+      opacity:Math.random()*0.7+0.1,animation:`float ${Math.random()*4+2}s ease-in-out ${Math.random()*3}s infinite`
+    }}))
+  );
+}
+
+function PBar({pct,color="#A78BFA",h=10}) {
+  return React.createElement('div',{style:{background:"rgba(255,255,255,0.1)",borderRadius:999,height:h,overflow:"hidden",width:"100%"}},
+    React.createElement('div',{style:{height:"100%",borderRadius:999,background:color,width:`${Math.min(100,pct)}%`,transition:"width 0.8s ease"}})
+  );
+}
+
+function XPBadge({xp}) {
+  return React.createElement('span',{style:{background:"rgba(245,158,11,0.2)",border:"1px solid rgba(245,158,11,0.5)",
+    color:"#fbbf24",fontWeight:800,padding:"3px 10px",borderRadius:999,fontSize:12,display:"inline-flex",gap:4,alignItems:"center"}},
+    `⚡ +${xp} XP`);
+}
+
+function Quiz({quiz,onPass}) {
+  const [sel,setSel]=useState(null);
+  const [sub,setSub]=useState(false);
+  const ok=sel===quiz.a;
+  function submit(){if(sel===null)return;setSub(true);if(ok)setTimeout(onPass,1400);}
+  return React.createElement('div',{style:{marginTop:24,background:"rgba(59,130,246,0.12)",border:"1px solid rgba(59,130,246,0.3)",borderRadius:20,padding:20}},
+    React.createElement('div',{style:{color:"#93c5fd",fontWeight:800,marginBottom:12}},"🧩 Quick Check"),
+    React.createElement('div',{style:{color:"white",fontWeight:700,marginBottom:14,lineHeight:1.5}},quiz.q),
+    React.createElement('div',{style:{display:"flex",flexDirection:"column",gap:8}},
+      quiz.opts.map((opt,i)=>{
+        let bg="rgba(255,255,255,0.06)",border="rgba(255,255,255,0.15)",color="#e2e8f0";
+        if(!sub){if(sel===i){bg="rgba(99,102,241,0.3)";border="#6366f1";color="white";}}
+        else{if(i===quiz.a){bg="rgba(16,185,129,0.2)";border="#10b981";color="#6ee7b7";}
+          else if(i===sel){bg="rgba(239,68,68,0.15)";border="#ef4444";color="#fca5a5";}
+          else{color="#6b7280";}}
+        return React.createElement('button',{key:i,onClick:()=>!sub&&setSel(i),
+          style:{textAlign:"left",padding:"12px 16px",borderRadius:12,border:`1.5px solid ${border}`,
+            background:bg,color,fontWeight:600,fontSize:14,cursor:sub?"default":"pointer"}},
+          (sub&&i===quiz.a?"✅ ":sub&&i===sel?"❌ ":"")+opt);
+      })
+    ),
+    !sub&&React.createElement('button',{onClick:submit,disabled:sel===null,
+      style:{marginTop:14,width:"100%",padding:"12px",borderRadius:12,fontWeight:800,fontSize:14,
+        background:sel===null?"rgba(255,255,255,0.1)":"linear-gradient(135deg,#3b82f6,#6366f1)",
+        color:sel===null?"#6b7280":"white",border:"none",cursor:sel===null?"default":"pointer"}},
+      "Check My Answer ✓"),
+    sub&&React.createElement('div',{style:{marginTop:12,textAlign:"center",fontWeight:800,padding:"10px",borderRadius:12,
+      background:ok?"rgba(16,185,129,0.15)":"rgba(239,68,68,0.1)",color:ok?"#6ee7b7":"#fca5a5"}},
+      ok?"🎉 Correct! Awesome work!":"Almost! The correct answer is highlighted in green.")
+  );
+}
+
+function Practice({challenge,title}) {
+  const [prompt,setPrompt]=useState("");
+  const [resp,setResp]=useState("");
+  const [loading,setLoading]=useState(false);
+  async function ask(){
+    if(!prompt.trim()||loading)return;
+    setLoading(true);setResp("");
+    try{
+      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,
+          system:`You are an enthusiastic, encouraging AI tutor for a 10-year-old child learning AI prompting in a lesson called "${title}". Be warm, fun, age-appropriate. Use simple words and occasional emojis. If their prompt is vague, guide them gently on how to be more specific — then answer anyway. If their prompt is great, celebrate it! Always end with ONE suggestion to make their next prompt even better. Keep under 250 words.`,
+          messages:[{role:"user",content:prompt}]})});
+      const d=await res.json();
+      setResp(d.content?.map(b=>b.text||"").join("")||"Hmm, something went wrong! Try again.");
+    }catch{setResp("Oops! Connection issue. Check your internet and try again! 🔄");}
+    setLoading(false);
+  }
+  return React.createElement('div',{style:{marginTop:24,background:"rgba(168,139,250,0.1)",border:"1px solid rgba(168,139,250,0.3)",borderRadius:20,padding:20}},
+    React.createElement('div',{style:{color:"#c4b5fd",fontWeight:800,marginBottom:6}},"🤖 Practice With Claude!"),
+    React.createElement('div',{style:{color:"#a78bfa",fontSize:13,marginBottom:4}},`Weak prompt to improve: "${challenge.weak}"`),
+    React.createElement('div',{style:{color:"#94a3b8",fontSize:12,marginBottom:12}},`💡 ${challenge.hint}`),
+    React.createElement('textarea',{value:prompt,onChange:e=>setPrompt(e.target.value),
+      placeholder:"Write your power prompt here...",rows:4,
+      style:{width:"100%",border:"1.5px solid rgba(168,139,250,0.3)",borderRadius:14,padding:14,
+        background:"rgba(255,255,255,0.05)",color:"white",fontSize:13,resize:"vertical",
+        fontFamily:"Nunito,sans-serif",display:"block"}}),
+    React.createElement('button',{onClick:ask,disabled:loading||!prompt.trim(),
+      style:{marginTop:10,width:"100%",padding:"13px",borderRadius:14,fontWeight:800,fontSize:14,
+        background:loading||!prompt.trim()?"rgba(255,255,255,0.1)":"linear-gradient(135deg,#a78bfa,#7c3aed)",
+        color:loading||!prompt.trim()?"#6b7280":"white",border:"none",cursor:loading||!prompt.trim()?"default":"pointer"}},
+      loading?"⏳ Claude is thinking...":"🚀 Send to Claude!"),
+    resp&&React.createElement('div',{style:{marginTop:14,background:"rgba(255,255,255,0.06)",borderRadius:14,padding:16,border:"1px solid rgba(255,255,255,0.1)"}},
+      React.createElement('div',{style:{color:"#a78bfa",fontWeight:800,fontSize:12,marginBottom:8}},"🤖 Claude responds:"),
+      React.createElement('div',{style:{color:"#e2e8f0",fontSize:13,lineHeight:1.7,whiteSpace:"pre-wrap"}},resp))
+  );
+}
+
+function LessonScreen({lesson,world,onComplete,onBack}) {
+  const [phase,setPhase]=useState("read");
+  function passQuiz(){setPhase("done");onComplete(lesson.xp);}
+  return React.createElement('div',{style:{minHeight:"100vh",background:"#0f0c29",color:"white",paddingBottom:80}},
+    React.createElement(Stars),
+    React.createElement('div',{style:{position:"relative",zIndex:1,maxWidth:680,margin:"0 auto",padding:"20px 16px"}},
+      React.createElement('div',{style:{display:"flex",alignItems:"center",gap:12,marginBottom:24}},
+        React.createElement('button',{onClick:onBack,style:{background:"rgba(255,255,255,0.1)",border:"none",color:"white",
+          width:38,height:38,borderRadius:"50%",fontSize:18,cursor:"pointer"}},"←"),
+        React.createElement('div',{style:{flex:1}},
+          React.createElement('div',{style:{fontSize:11,color:"rgba(255,255,255,0.5)"}},[world.emoji," ",world.name]),
+          React.createElement('div',{style:{fontWeight:800,fontSize:15}},lesson.title)),
+        React.createElement(XPBadge,{xp:lesson.xp})),
+      lesson.type==="live"&&React.createElement('div',{style:{background:"rgba(6,182,212,0.15)",border:"1px solid rgba(6,182,212,0.4)",
+        borderRadius:14,padding:"10px 14px",marginBottom:16,display:"flex",gap:10,alignItems:"center"}},
+        React.createElement('div',{style:{width:8,height:8,borderRadius:"50%",background:"#06b6d4",boxShadow:"0 0 8px #06b6d4",flexShrink:0}}),
+        React.createElement('div',{style:{color:"#67e8f9",fontSize:12,fontWeight:700}},"🔴 LIVE LESSON — Claude will tell you what's happening RIGHT NOW in AI!")),
+      React.createElement('div',{style:{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",
+        borderRadius:24,padding:24,marginBottom:16},className:"slide-up"},
+        React.createElement('div',{style:{fontSize:52,textAlign:"center",marginBottom:16}},lesson.icon),
+        React.createElement('h2',{className:"display-font",style:{textAlign:"center",fontSize:22,marginBottom:20,
+          background:`linear-gradient(135deg,${world.g1},${world.g2})`,WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}},lesson.title),
+        React.createElement('div',{style:{color:"#cbd5e1",lineHeight:1.9,fontSize:14,whiteSpace:"pre-line"}},lesson.content)),
+      lesson.challenge&&phase!=="done"&&React.createElement(Practice,{challenge:lesson.challenge,title:lesson.title}),
+      phase==="read"&&React.createElement('button',{
+        onClick:()=>lesson.quiz?setPhase("quiz"):(setPhase("done"),onComplete(lesson.xp)),
+        className:"shimmer-btn",
+        style:{width:"100%",marginTop:20,padding:"16px",borderRadius:18,fontWeight:900,fontSize:16,border:"none",color:"white",cursor:"pointer"}},
+        lesson.quiz?"I'm Ready — Take the Quiz! 🧩":"Complete This Lesson! ✅"),
+      phase==="quiz"&&lesson.quiz&&React.createElement(Quiz,{quiz:lesson.quiz,onPass:passQuiz}),
+      phase==="done"&&React.createElement('div',{className:"pop-in",style:{marginTop:20,background:"rgba(16,185,129,0.15)",
+        border:"1px solid rgba(16,185,129,0.4)",borderRadius:24,padding:28,textAlign:"center"}},
+        React.createElement('div',{style:{fontSize:56,marginBottom:8}},"🎉"),
+        React.createElement('div',{className:"display-font",style:{fontSize:24,color:"#6ee7b7",marginBottom:4}},"Lesson Complete!"),
+        React.createElement('div',{style:{color:"#a7f3d0",marginBottom:20}},`You earned +${lesson.xp} XP!`),
+        React.createElement('button',{onClick:onBack,style:{padding:"14px 32px",borderRadius:16,
+          background:"linear-gradient(135deg,#10b981,#059669)",color:"white",fontWeight:800,border:"none",fontSize:15,cursor:"pointer"}},
+          "Back to Map 🗺️"))
+    )
+  );
+}
+
+function MapScreen({profile,onSelect,onBack}) {
+  const total=WORLDS.flatMap(w=>w.lessons).length;
+  return React.createElement('div',{style:{minHeight:"100vh",background:"#0f0c29",color:"white",paddingBottom:80}},
+    React.createElement(Stars),
+    React.createElement('div',{style:{position:"relative",zIndex:1,maxWidth:720,margin:"0 auto",padding:"20px 16px"}},
+      React.createElement('div',{style:{display:"flex",alignItems:"center",gap:12,marginBottom:24}},
+        React.createElement('button',{onClick:onBack,style:{background:"rgba(255,255,255,0.1)",border:"none",color:"white",
+          width:38,height:38,borderRadius:"50%",fontSize:18,cursor:"pointer"}},"←"),
+        React.createElement('div',null,
+          React.createElement('div',{className:"display-font",style:{fontSize:22}},"🗺️ Learning Map"),
+          React.createElement('div',{style:{color:"rgba(255,255,255,0.5)",fontSize:12}},`${profile.done.length}/${total} lessons complete`))),
+      React.createElement('div',{style:{marginBottom:28}},React.createElement(PBar,{pct:(profile.done.length/total)*100,color:"linear-gradient(90deg,#a78bfa,#ec4899)",h:12})),
+      WORLDS.map((world,wi)=>{
+        const done=world.lessons.filter(l=>profile.done.includes(l.id)).length;
+        const unlocked=wi===0||profile.done.includes(WORLDS[wi-1].lessons[WORLDS[wi-1].lessons.length-1].id);
+        return React.createElement('div',{key:world.id,style:{marginBottom:20,borderRadius:24,overflow:"hidden",
+          border:"1px solid rgba(255,255,255,0.1)",opacity:unlocked?1:0.5}},
+          React.createElement('div',{style:{background:`linear-gradient(135deg,${world.g1},${world.g2})`,padding:"16px 20px",
+            display:"flex",alignItems:"center",justifyContent:"space-between"}},
+            React.createElement('div',null,
+              React.createElement('div',{style:{fontSize:11,fontWeight:700,opacity:0.85,textTransform:"uppercase",letterSpacing:1}},
+                unlocked?`World ${world.id}`:`🔒 World ${world.id}`),
+              React.createElement('div',{className:"display-font",style:{fontSize:20,marginTop:2}},[world.emoji," ",world.name]),
+              React.createElement('div',{style:{fontSize:12,opacity:0.85}},world.subtitle)),
+            React.createElement('div',{style:{textAlign:"center",background:"rgba(0,0,0,0.2)",borderRadius:16,padding:"8px 16px"}},
+              React.createElement('div',{style:{fontWeight:900,fontSize:20}},`${done}/${world.lessons.length}`),
+              React.createElement('div',{style:{fontSize:10,opacity:0.8}},"done"))),
+          React.createElement('div',{style:{background:"rgba(255,255,255,0.03)",padding:14,display:"flex",flexDirection:"column",gap:8}},
+            world.lessons.map((lesson,li)=>{
+              const isDone=profile.done.includes(lesson.id);
+              const prevOk=li===0||profile.done.includes(world.lessons[li-1].id);
+              const canDo=unlocked&&prevOk;
+              return React.createElement('button',{key:lesson.id,onClick:()=>canDo&&onSelect(lesson,world),
+                style:{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",borderRadius:16,
+                  border:`1.5px solid ${isDone?"rgba(16,185,129,0.4)":canDo?"rgba(255,255,255,0.15)":"rgba(255,255,255,0.05)"}`,
+                  background:isDone?"rgba(16,185,129,0.1)":canDo?"rgba(255,255,255,0.05)":"rgba(255,255,255,0.02)",
+                  color:"white",cursor:canDo?"pointer":"default",textAlign:"left",width:"100%"}},
+                React.createElement('span',{style:{fontSize:22,flexShrink:0}},isDone?"✅":canDo?lesson.icon:"🔒"),
+                React.createElement('div',{style:{flex:1}},
+                  React.createElement('div',{style:{fontWeight:700,fontSize:13,color:isDone?"#6ee7b7":canDo?"white":"#6b7280"}},lesson.title),
+                  React.createElement('div',{style:{fontSize:11,color:"rgba(255,255,255,0.35)",marginTop:2}},
+                    lesson.type==="live"?"🔴 Live AI content":lesson.type==="practice"?"🎯 Practice":"📖 Reading + Quiz")),
+                React.createElement(XPBadge,{xp:lesson.xp}));
+            }))
+        );
+      })
+    )
+  );
+}
+
+function HomeScreen({profile,onMap,onReset}) {
+  const allL=WORLDS.flatMap(w=>w.lessons);
+  const totalXP=allL.reduce((s,l)=>s+l.xp,0);
+  const level=Math.max(1,Math.floor(profile.xp/250)+1);
+  const levelXP=profile.xp%250;
+  const earned=BADGES.filter(b=>b.check(profile));
+  const next=allL.find(l=>!profile.done.includes(l.id));
+  const nextW=next?WORLDS.find(w=>w.lessons.some(l=>l.id===next.id)):null;
+  return React.createElement('div',{style:{minHeight:"100vh",background:"#0f0c29",color:"white",paddingBottom:80}},
+    React.createElement(Stars),
+    React.createElement('div',{style:{position:"relative",zIndex:1,maxWidth:680,margin:"0 auto",padding:"20px 16px"}},
+      React.createElement('div',{style:{textAlign:"center",paddingTop:16,paddingBottom:28}},
+        React.createElement('div',{className:"float",style:{fontSize:64,marginBottom:8}},"🚀"),
+        React.createElement('div',{className:"display-font",style:{fontSize:32,background:"linear-gradient(135deg,#a78bfa,#ec4899,#f59e0b)",
+          WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:1.1}},"AI Adventure Academy"),
+        React.createElement('div',{style:{color:"rgba(255,255,255,0.5)",fontSize:14,marginTop:6}},`Hey ${profile.name}! Ready to build the future? 👋`)),
+      React.createElement('div',{style:{background:"linear-gradient(135deg,rgba(167,139,250,0.2),rgba(124,58,237,0.2))",
+        border:"1px solid rgba(167,139,250,0.4)",borderRadius:24,padding:22,marginBottom:16}},
+        React.createElement('div',{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}},
+          React.createElement('div',null,
+            React.createElement('div',{style:{fontWeight:900,fontSize:26}},`Level ${level} 🧙‍♂️`),
+            React.createElement('div',{style:{color:"rgba(255,255,255,0.5)",fontSize:12}},`${250-levelXP} XP to Level ${level+1}`)),
+          React.createElement('div',{style:{textAlign:"right"}},
+            React.createElement('div',{style:{fontWeight:900,fontSize:28,color:"#fbbf24"}},`⚡ ${profile.xp}`),
+            React.createElement('div',{style:{color:"rgba(255,255,255,0.4)",fontSize:11}},"Total XP"))),
+        React.createElement(PBar,{pct:(levelXP/250)*100,color:"linear-gradient(90deg,#a78bfa,#7c3aed)",h:10})),
+      React.createElement('div',{style:{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:16}},
+        [{icon:"📚",val:profile.done.length,label:"Lessons"},{icon:"🏅",val:earned.length,label:"Badges"},
+         {icon:"🌍",val:WORLDS.filter(w=>w.lessons.every(l=>profile.done.includes(l.id))).length,label:"Worlds Done"}]
+        .map(s=>React.createElement('div',{key:s.label,style:{background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",
+          borderRadius:18,padding:"16px 8px",textAlign:"center"}},
+          React.createElement('div',{style:{fontSize:26}},s.icon),
+          React.createElement('div',{style:{fontWeight:900,fontSize:22,marginTop:4}},s.val),
+          React.createElement('div',{style:{color:"rgba(255,255,255,0.4)",fontSize:11}},s.label)))),
+      React.createElement('button',{onClick:onMap,className:"shimmer-btn",
+        style:{width:"100%",padding:"18px",borderRadius:20,fontWeight:900,fontSize:17,border:"none",
+          color:"white",cursor:"pointer",marginBottom:12,boxShadow:"0 8px 32px rgba(167,139,250,0.4)"}},
+        next?`Continue → ${next.icon} ${next.title}`:"🏆 All Complete! View Map"),
+      nextW&&React.createElement('div',{style:{textAlign:"center",color:"rgba(255,255,255,0.35)",fontSize:12,marginBottom:20}},
+        `Up next in ${nextW.emoji} ${nextW.name}`),
+      React.createElement('div',{style:{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",
+        borderRadius:24,padding:20,marginBottom:16}},
+        React.createElement('div',{className:"display-font",style:{fontSize:18,marginBottom:14}},"🏅 My Badges"),
+        React.createElement('div',{style:{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:8}},
+          BADGES.map(b=>{const e=b.check(profile);
+            return React.createElement('div',{key:b.id,style:{textAlign:"center",padding:"8px 4px",borderRadius:12,
+              background:e?"rgba(245,158,11,0.15)":"rgba(255,255,255,0.03)",
+              border:`1.5px solid ${e?"rgba(245,158,11,0.5)":"rgba(255,255,255,0.06)"}`,opacity:e?1:0.4}},
+              React.createElement('div',{style:{fontSize:20}},b.icon),
+              React.createElement('div',{style:{fontSize:8,fontWeight:700,color:e?"#fbbf24":"#6b7280",marginTop:3,lineHeight:1.2}},b.name));}))),
+      React.createElement('button',{onClick:()=>{if(window.confirm("Reset all progress?"))onReset();},
+        style:{width:"100%",padding:"10px",background:"none",border:"none",color:"rgba(255,255,255,0.2)",fontSize:12,cursor:"pointer",textDecoration:"underline"}},
+        "Reset Progress")
+    )
+  );
+}
+
+function NameScreen({onSet}) {
+  const [name,setName]=useState("");
+  return React.createElement('div',{style:{minHeight:"100vh",background:"#0f0c29",display:"flex",alignItems:"center",justifyContent:"center",padding:20}},
+    React.createElement(Stars),
+    React.createElement('div',{style:{position:"relative",zIndex:1,background:"rgba(255,255,255,0.07)",
+      backdropFilter:"blur(20px)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:32,padding:40,maxWidth:400,width:"100%",textAlign:"center"},className:"slide-up"},
+      React.createElement('div',{className:"float",style:{fontSize:72,marginBottom:12}},"🚀"),
+      React.createElement('div',{className:"display-font",style:{fontSize:30,background:"linear-gradient(135deg,#a78bfa,#ec4899,#f59e0b)",
+        WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",marginBottom:8,lineHeight:1.2}},"AI Adventure Academy"),
+      React.createElement('div',{style:{color:"rgba(255,255,255,0.5)",fontSize:14,marginBottom:28,lineHeight:1.6}},
+        "Learn to use AI, build apps, design games, and earn money with technology! 🎮💰"),
+      React.createElement('input',{value:name,onChange:e=>setName(e.target.value),
+        onKeyDown:e=>e.key==="Enter"&&name.trim()&&onSet(name.trim()),
+        placeholder:"What's your name, future creator?",
+        style:{width:"100%",background:"rgba(255,255,255,0.08)",border:"1.5px solid rgba(167,139,250,0.4)",
+          borderRadius:16,padding:"14px 18px",color:"white",fontSize:15,textAlign:"center",
+          fontFamily:"Nunito,sans-serif",marginBottom:14,display:"block"}}),
+      React.createElement('button',{onClick:()=>name.trim()&&onSet(name.trim()),
+        className:name.trim()?"shimmer-btn":"",
+        style:{width:"100%",padding:"16px",borderRadius:16,fontWeight:900,fontSize:16,
+          background:name.trim()?"":"rgba(255,255,255,0.1)",
+          color:name.trim()?"white":"#6b7280",border:"none",cursor:name.trim()?"pointer":"default"}},
+        "Start My Adventure! 🚀"),
+      React.createElement('div',{style:{marginTop:20,color:"rgba(255,255,255,0.25)",fontSize:11}},
+        "7 worlds • 22 lessons • Live AI practice • Badge collection"))
+  );
+}
+
+function App() {
+  const [profile,setProfile]=useState(()=>{
+    try{const s=localStorage.getItem("aaa_v3");return s?JSON.parse(s):null;}catch{return null;}
+  });
+  const [screen,setScreen]=useState("home");
+  const [lesson,setLesson]=useState(null);
+  const [world,setWorld]=useState(null);
+  const [xpPop,setXpPop]=useState(null);
+
+  useEffect(()=>{if(profile)try{localStorage.setItem("aaa_v3",JSON.stringify(profile));}catch{};},[profile]);
+
+  function complete(xp){
+    setProfile(p=>{
+      const already=p.done.includes(lesson.id);
+      return {...p,xp:already?p.xp:p.xp+xp,done:already?p.done:[...p.done,lesson.id]};
+    });
+    if(!profile?.done?.includes(lesson?.id)){setXpPop(xp);setTimeout(()=>setXpPop(null),2500);}
+  }
+
+  if(!profile) return React.createElement(NameScreen,{onSet:name=>setProfile({name,xp:0,done:[]})});
+
+  const pop=xpPop&&React.createElement('div',{className:"xp-fly",style:{position:"fixed",top:30,left:"50%",transform:"translateX(-50%)",
+    zIndex:9999,background:"linear-gradient(135deg,#f59e0b,#ef4444)",color:"white",fontWeight:900,fontSize:20,
+    padding:"12px 28px",borderRadius:999,boxShadow:"0 8px 30px rgba(245,158,11,0.6)"}},`⚡ +${xpPop} XP!`);
+
+  if(screen==="lesson"&&lesson&&world)
+    return React.createElement(React.Fragment,null,pop,React.createElement(LessonScreen,{lesson,world,onComplete:complete,onBack:()=>setScreen("map")}));
+  if(screen==="map")
+    return React.createElement(React.Fragment,null,pop,React.createElement(MapScreen,{profile,onSelect:(l,w)=>{setLesson(l);setWorld(w);setScreen("lesson");},onBack:()=>setScreen("home")}));
+  return React.createElement(React.Fragment,null,pop,React.createElement(HomeScreen,{profile,onMap:()=>setScreen("map"),
+    onReset:()=>{setProfile(null);try{localStorage.removeItem("aaa_v3");}catch{};}}));
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(React.createElement(React.StrictMode,null,React.createElement(App)));
+</script>
 </body>
 </html>
